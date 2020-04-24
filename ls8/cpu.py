@@ -10,6 +10,7 @@ class CPU:
         """Construct a new CPU."""
         self.ram = [0] * 256
         self.register = [0]*8
+        self.flag = [0]*8
         self.running = True
         self.pc = 0
         self.CALL = 0b01010000
@@ -21,6 +22,11 @@ class CPU:
         self.RET = 0b00010001
         self.ADD = 0b10100000
         self.MUL = 0b10100010
+        self.CMP = 0b10100111
+        self.JMP = 0b01010100
+        self.JNE = 0b01010110
+        self.JEQ = 0b01010101
+        self.E = 7
 
     def load(self):
         """Load a program into memory."""
@@ -46,37 +52,27 @@ class CPU:
             self.register[reg_a] += self.register[reg_b]
         elif op == "MUL":
             self.register[reg_a] *= self.register[reg_b]
+        elif op == "CMP":
+            if self.register[reg_a] == self.register[reg_b]:
+                self.flag = 0b00000001
+            elif self.register[reg_a] < self.register[reg_b]:
+                self.flag = 0b00000100
+            elif self.register[reg_a] > self.register[reg_b]:
+                self.flag = 0b00000010
         else:
             raise Exception("Unsupported ALU operation")
 
     def halt(self):
         self.running = False
 
-    def trace(self):
-        """
-        Handy function to print out the CPU state. You might want to call this
-        from run() if you need help debugging.
-        """
-
-        print(f"TRACE: %02X | %02X %02X %02X |" % (
-            self.pc,
-            # self.fl,
-            # self.ie,
-            self.ram_read(self.pc),
-            self.ram_read(self.pc + 1),
-            self.ram_read(self.pc + 2)
-        ), end='')
-
-        for i in range(8):
-            print(" %02X" % self.reg[i], end='')
-
-        print()
-
     def ram_read(self, address):
         return self.ram[address]
 
     def ram_write(self, address, payload):
         self.ram[address] = payload
+
+    def flag_check(self):
+        return (self.flag == 1)
 
     def run(self):
         """Run the CPU."""
@@ -105,9 +101,50 @@ class CPU:
                 self.alu("MUL", self.ram[IR+1], self.ram[IR+2])
                 IR += 3
 
+            elif instruction == self.CMP:
+                self.alu("CMP", self.ram[IR+1], self.ram[IR+2])
+                IR += 3
+
+            elif instruction == self.JMP:
+                IR = self.register[self.ram_read(IR+1)]
+
+            elif instruction == self.JNE:
+                if not self.flag_check():
+                    reg_num = self.ram[IR+1]
+                    IR = self.register[reg_num]
+                else:
+                    IR += 2
+
+            elif instruction == self.JEQ:
+                if self.flag_check():
+                    reg_num = self.ram[IR+1]
+                    IR = self.register[reg_num]
+                else:
+                    IR += 2
+
             elif instruction == self.HLT:
                 self.halt()
 
             else:
                 print("Unknown Instruction")
                 self.halt()
+
+    # def trace(self):
+    #     """
+    #     Handy function to print out the CPU state. You might want to call this
+    #     from run() if you need help debugging.
+    #     """
+
+    #     print(f"TRACE: %02X | %02X %02X %02X |" % (
+    #         self.pc,
+    #         # self.fl,
+    #         # self.ie,
+    #         self.ram_read(self.pc),
+    #         self.ram_read(self.pc + 1),
+    #         self.ram_read(self.pc + 2)
+    #     ), end='')
+
+    #     for i in range(8):
+    #         print(" %02X" % self.reg[i], end='')
+
+    #     print()

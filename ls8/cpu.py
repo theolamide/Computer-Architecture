@@ -12,10 +12,15 @@ class CPU:
         self.register = [0]*8
         self.running = True
         self.pc = 0
+        self.CALL = 0b01010000
         self.LDI = 0b10000010
         self.PRN = 0b01000111
-        self.MUL = 0b10100010
         self.HLT = 0b00000001
+        self.POP = 0b01000110
+        self.PUSH = 0b01000101
+        self.RET = 0b00010001
+        self.ADD = 0b10100000
+        self.MUL = 0b10100010
 
     def load(self):
         """Load a program into memory."""
@@ -38,8 +43,9 @@ class CPU:
         """ALU operations."""
 
         if op == "ADD":
-            self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+            self.register[reg_a] += self.register[reg_b]
+        elif op == "MUL":
+            self.register[reg_a] *= self.register[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -91,8 +97,13 @@ class CPU:
                 print(value)
                 IR += 2
 
+            elif instruction == self.ADD:
+                self.alu("ADD", self.ram[IR+1], self.ram[IR+2])
+                IR += 3
+
             elif instruction == self.MUL:
-                pass
+                self.alu("MUL", self.ram[IR+1], self.ram[IR+2])
+                IR += 3
 
             elif instruction == self.HLT:
                 self.halt()
